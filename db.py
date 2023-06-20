@@ -16,9 +16,10 @@ def insert(obj_message):
     category = obj_message.category_text
     amount = obj_message.amount
     created = obj_message.created
+    user_id = obj_message.user_id
     cursor.execute(
-        f"""INSERT INTO expenses (amount, category_name, created)
-            VALUES ({amount}, '{category}', '{created}')  
+        f"""INSERT INTO expenses (amount, category_name, created, user_id)
+            VALUES ({amount}, '{category}', '{created}', {user_id})  
         """
     )
     connection.commit()

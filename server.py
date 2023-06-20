@@ -24,7 +24,7 @@ def show_all_commands(message):
 
 @bot.message_handler(commands=["today"])
 def today(message):
-	answer_message = expenses.get_today_statistics()
+	answer_message = expenses.get_today_statistics(message.chat.id)
 	if answer_message != "":
 		bot.send_message(message.chat.id, f"""Расходы за сегодня:\n{answer_message}""")
 	else:
@@ -33,7 +33,7 @@ def today(message):
 
 @bot.message_handler(commands=["month"])
 def month(message):
-	answer_message = expenses.get_month_statistics()
+	answer_message = expenses.get_month_statistics(message.from_user.id)
 	if answer_message != "":
 		bot.send_message(message.chat.id, f"""Расходы за месяц:\n{answer_message}""")
 	else:
@@ -42,7 +42,7 @@ def month(message):
 
 @bot.message_handler(commands=['show'])
 def show_expenses(message):
-	answer_message = expenses.get_expenses()
+	answer_message = expenses.get_expenses(message.chat.id)
 	if answer_message != "":
 		bot.send_message(message.chat.id, answer_message)
 	else:
@@ -67,6 +67,7 @@ def add_consumption(message):
 	if not is_message_correct(parsed_message):
 		bot.send_message(message.chat.id, """Не могу понять сообщение. Напишите сообщение в формате, например:\nшиха 200""" )
 	else:
+		parsed_message.append(message.chat.id)
 		expenses.add_expense(parsed_message)
 		bot.send_message(message.from_user.id, "Расход успешно добавлен")
 
@@ -80,8 +81,8 @@ def is_message_correct(parsed_message : list) :
 
 
 def clear_func(message: object):
-	parsed_message = message.text
-	if parsed_message in categories.categories:
+	parsed_message = [message.text, message.chat.id]
+	if parsed_message[0] in categories.categories:
 		expenses.clear(parsed_message)
 		bot.send_message(message.chat.id, """Категория успешно обнулена""")
 	else:
