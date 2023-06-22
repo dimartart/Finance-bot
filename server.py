@@ -2,7 +2,7 @@ import telebot
 import datetime
 import expenses
 import categories
-
+from telebot import types
 
 #the data should put in the massage in format "category number"
 
@@ -33,20 +33,32 @@ def today(message):
 
 @bot.message_handler(commands=["month"])
 def month(message):
-	answer_message = expenses.get_month_statistics(message.from_user.id)
+	answer_message = expenses.get_month_statistics(message.chat.id)
 	if answer_message != "":
 		bot.send_message(message.chat.id, f"""Расходы за месяц:\n{answer_message}""")
 	else:
-		bot.send_message(message.chat.id, "За весь месяц расходов нет")
+		bot.send_message(message.chat.id, "За месяц расходов нет")
 
 
 @bot.message_handler(commands=['show'])
 def show_expenses(message):
-	answer_message = expenses.get_expenses(message.chat.id)
+	keyboard = types.InlineKeyboardMarkup()
+	key_today = types.InlineKeyboardButton(text="Расходы за сегодня", callback_data="/today")
+	key_month = types.InlineKeyboardButton(text="Расходы за месяц", callback_data="/month")
+	keyboard.add(key_today, key_month)
+	answer_message = f" Расходы за все время:\n{expenses.get_expenses(message.chat.id)}"
 	if answer_message != "":
-		bot.send_message(message.chat.id, answer_message)
+		bot.send_message(message.chat.id, answer_message, reply_markup=keyboard)
 	else:
 		bot.send_message(message.chat.id, """У вас нет расходов!""")
+
+
+@bot.callback_query_handler(func=lambda call: True)
+def callback_worker(call):
+	if call.data == "/today":
+		today(message=call.message)
+	elif call.data == "/month":
+		month(message=call.message)
 
 
 @bot.message_handler(commands=['clear_category'])
