@@ -2,6 +2,7 @@ import telebot
 import datetime
 import expenses
 import categories
+import re
 from telebot import types
 
 #the data should put in the massage in format "category number"
@@ -76,7 +77,7 @@ def show_categories(message):
 @bot.message_handler(func=lambda m: True)
 def add_consumption(message):
 	parsed_message = message.text.split()
-	if not is_message_correct(parsed_message):
+	if not is_message_correct(message.text):
 		bot.send_message(message.chat.id, """Не могу понять сообщение. Напишите сообщение в формате, например:\nшиха 200""" )
 	else:
 		parsed_message.append(message.chat.id)
@@ -84,9 +85,15 @@ def add_consumption(message):
 		bot.send_message(message.from_user.id, "Расход успешно добавлен")
 
 
-def is_message_correct(parsed_message : list) :
-	if (len(parsed_message) == 2 and parsed_message[1].isdigit()
-			and parsed_message[0] in categories.categories):
+def is_message_correct(message_text : str) :
+	match = re.findall(r"^([а-я]+)\s(\d+)\Z", message_text, re.MULTILINE)
+	category = ''
+	if match != []:
+		category = match[0][0]
+	else:
+		return False
+
+	if category in categories.categories:
 		return True
 	else:
 		return False
