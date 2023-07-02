@@ -10,20 +10,31 @@ from telebot import types
 bot = telebot.TeleBot("5728308228:AAHTqNKbTwJGXiKDk7q3-gCmDSLPBWnCnhc")
 
 
-@bot.message_handler(commands=['start', 'help'])
+@bot.message_handler(commands=['start'])
 def show_all_commands(message):
+	markup = types.ReplyKeyboardMarkup()
+	button_add = types.KeyboardButton("Добавить расход")
+	button_show = types.KeyboardButton("Показать все расходы")
+	button_today = types.KeyboardButton("Расходы за сегодня")
+	button_month = types.KeyboardButton("Расходы за месяц")
+	button_clear = types.KeyboardButton("Обнулить категорию")
+	button_categories = types.KeyboardButton("Доступные категории")
+	markup.add(button_add, button_show, button_today, button_month, button_clear, button_categories)
+
+	bot.send_message(message.from_user.id, "Приветствую! Посчитаем расходы?", reply_markup=markup)
+
+
+@bot.message_handler(regexp="Добавить расход")
+def add_help(message):
 	bot.send_message(message.from_user.id,
-					 'Бот для подсчета ваших расходов\n'+
-					 'Здесь команды для управления\n'+
-					 'Для добавления расхода отправьте сообщение в формате "категория сумма"\n'+
-					 'Для показа всех расходов /show\n'+
-					 'Показать расходы за день /today\n'+
-					 'Показать расходы за месяц /month\n'+
-					 'Обнулить категорию /clear_category\n'+
-					 'Показать список доступных категорий /categories')
+					 "Чтобы добавить расход,\n"
+					 "просто отправьте в чат сообщение в формате\n"
+					 "\"категория сумма\"\n" 
+					 "Список доступных категорий вы можете посмотреть,\n"
+					 "нажав кнопку \"Доступные категории\" в меню")
 
 
-@bot.message_handler(commands=["today"])
+@bot.message_handler(regexp="Расходы за сегодня")
 def today(message):
 	answer_message = expenses.get_today_statistics(message.chat.id)
 	if answer_message != "":
@@ -32,7 +43,7 @@ def today(message):
 		bot.send_message(message.chat.id, "Сегодня расходов нет")
 
 
-@bot.message_handler(commands=["month"])
+@bot.message_handler(regexp="Расходы за месяц")
 def month(message):
 	answer_message = expenses.get_month_statistics(message.chat.id)
 	if answer_message != "":
@@ -41,34 +52,34 @@ def month(message):
 		bot.send_message(message.chat.id, "За месяц расходов нет")
 
 
-@bot.message_handler(commands=['show'])
+@bot.message_handler(regexp="Показать все расходы")
 def show_expenses(message):
-	keyboard = types.InlineKeyboardMarkup()
-	key_today = types.InlineKeyboardButton(text="Расходы за сегодня", callback_data="/today")
-	key_month = types.InlineKeyboardButton(text="Расходы за месяц", callback_data="/month")
-	keyboard.add(key_today, key_month)
+	# keyboard = types.InlineKeyboardMarkup()
+	# key_today = types.InlineKeyboardButton(text="Расходы за сегодня", callback_data="/today")
+	# key_month = types.InlineKeyboardButton(text="Расходы за месяц", callback_data="/month")
+	# keyboard.add(key_today, key_month)
 	answer_message = f" Расходы за все время:\n{expenses.get_expenses(message.chat.id)}"
 	if answer_message != "":
-		bot.send_message(message.chat.id, answer_message, reply_markup=keyboard)
+		bot.send_message(message.chat.id, answer_message)
 	else:
 		bot.send_message(message.chat.id, """У вас нет расходов!""")
 
 
-@bot.callback_query_handler(func=lambda call: True)
-def callback_worker(call):
-	if call.data == "/today":
-		today(message=call.message)
-	elif call.data == "/month":
-		month(message=call.message)
+# @bot.callback_query_handler(func=lambda call: True)
+# def callback_worker(call):
+# 	if call.data == "/today":
+# 		today(message=call.message)
+# 	elif call.data == "/month":
+# 		month(message=call.message)
 
 
-@bot.message_handler(commands=['clear_category'])
+@bot.message_handler(regexp="Обнулить категорию")
 def delete_expense(message):
 	bot.send_message(message.chat.id, """Напишите категорию для обнуления суммы""")
 	bot.register_next_step_handler(message, clear_func)
 
 
-@bot.message_handler(commands=['categories'])
+@bot.message_handler(regexp="Доступные категории")
 def show_categories(message):
 	categories_str = '\n'.join(categories.categories)
 	bot.send_message(message.chat.id, categories_str)
