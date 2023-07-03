@@ -13,13 +13,12 @@ bot = telebot.TeleBot("5728308228:AAHTqNKbTwJGXiKDk7q3-gCmDSLPBWnCnhc")
 @bot.message_handler(commands=['start'])
 def show_all_commands(message):
 	markup = types.ReplyKeyboardMarkup()
-	button_add = types.KeyboardButton("Добавить расход")
-	button_show = types.KeyboardButton("Показать все расходы")
-	button_today = types.KeyboardButton("Расходы за сегодня")
-	button_month = types.KeyboardButton("Расходы за месяц")
+	button_add = types.KeyboardButton("Добавить расход ➕")
+	button_show = types.KeyboardButton("Показать все расходы 📓")
+	button_statistics = types.KeyboardButton("Статистика")
 	button_clear = types.KeyboardButton("Обнулить категорию")
 	button_categories = types.KeyboardButton("Доступные категории")
-	markup.add(button_add, button_show, button_today, button_month, button_clear, button_categories)
+	markup.add(button_add, button_show, button_statistics, button_clear, button_categories)
 
 	bot.send_message(message.from_user.id, "Приветствую! Посчитаем расходы?", reply_markup=markup)
 
@@ -34,43 +33,56 @@ def add_help(message):
 					 "нажав кнопку \"Доступные категории\" в меню")
 
 
-@bot.message_handler(regexp="Расходы за сегодня")
+@bot.message_handler(regexp="Статистика")
+def statistics(message):
+	keyboard = types.InlineKeyboardMarkup()
+	key_today = types.InlineKeyboardButton(text="Расходы за сегодня", callback_data="today")
+	key_month = types.InlineKeyboardButton(text="Расходы за месяц", callback_data="month")
+	key_year = types.InlineKeyboardButton(text="Расходы за год по месяцам", callback_data="year")
+	keyboard.add(key_today, key_month, key_year)
+
+	bot.send_message(message.from_user.id, "Выберете период для просмотра статистики", reply_markup=keyboard)
+
+
 def today(message):
+	today_date = datetime.datetime.now().strftime("%Y-%m-%d")
 	answer_message = expenses.get_today_statistics(message.chat.id)
 	if answer_message != "":
-		bot.send_message(message.chat.id, f"""Расходы за сегодня:\n{answer_message}""")
+		bot.send_message(message.chat.id, f"""Расходы за сегодня {today_date}:\n{answer_message}""")
 	else:
 		bot.send_message(message.chat.id, "Сегодня расходов нет")
 
 
-@bot.message_handler(regexp="Расходы за месяц")
 def month(message):
+	month_date = datetime.datetime.now().strftime("%Y-%m")
 	answer_message = expenses.get_month_statistics(message.chat.id)
 	if answer_message != "":
-		bot.send_message(message.chat.id, f"""Расходы за месяц:\n{answer_message}""")
+		bot.send_message(message.chat.id, f"""Расходы за месяц {month_date}:\n{answer_message}""")
 	else:
 		bot.send_message(message.chat.id, "За месяц расходов нет")
 
 
+def year(message):
+	pass
+
+
+@bot.callback_query_handler(func=lambda call: True)
+def callback_worker(call):
+	if call.data == "today":
+		today(message=call.message)
+	elif call.data == "month":
+		month(message=call.message)
+	elif call.data == "year":
+		year(message=call.message)
+
+
 @bot.message_handler(regexp="Показать все расходы")
 def show_expenses(message):
-	# keyboard = types.InlineKeyboardMarkup()
-	# key_today = types.InlineKeyboardButton(text="Расходы за сегодня", callback_data="/today")
-	# key_month = types.InlineKeyboardButton(text="Расходы за месяц", callback_data="/month")
-	# keyboard.add(key_today, key_month)
 	answer_message = f" Расходы за все время:\n{expenses.get_expenses(message.chat.id)}"
 	if answer_message != "":
 		bot.send_message(message.chat.id, answer_message)
 	else:
 		bot.send_message(message.chat.id, """У вас нет расходов!""")
-
-
-# @bot.callback_query_handler(func=lambda call: True)
-# def callback_worker(call):
-# 	if call.data == "/today":
-# 		today(message=call.message)
-# 	elif call.data == "/month":
-# 		month(message=call.message)
 
 
 @bot.message_handler(regexp="Обнулить категорию")
@@ -101,11 +113,10 @@ def is_message_correct(message_text : str) :
 	category = ''
 	if match != []:
 		category = match[0][0]
-	else:
-		return False
-
-	if category in categories.categories:
-		return True
+		if category in categories.categories:
+			return True
+		else:
+			return False
 	else:
 		return False
 
