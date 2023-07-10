@@ -43,6 +43,17 @@ def get_month_statistics(user_id : int) -> str:
     return res_in_str
 
 
+def get_year_statistics(user_id : int) ->str:
+    cursor = db.get_cursor()
+    cursor.execute(f"""SELECT category_name, SUM(amount)
+                      FROM expenses where EXTRACT(YEAR FROM created) = 
+                      EXTRACT(YEAR from now()) AND user_id = {user_id}
+                      GROUP BY category_name""")
+    result = cursor.fetchall()
+    res_in_str = "\n".join([f"{tpl_values[0]}: {tpl_values[1]}" for tpl_values in result])
+    return res_in_str
+
+
 def get_expenses(user_id : int) -> str:
     cursor = db.get_cursor()
     cursor.execute(f"""SELECT c.name, SUM(amount) FROM
@@ -62,6 +73,12 @@ def clear(message : list):
     cursor.execute(f"""DELETE FROM expenses
                     WHERE category_name = '{category}'
                     AND user_id = {user_id}""")
+
+
+def delete_all(user_id : int):
+    user_id = user_id
+    cursor = db.get_cursor()
+    cursor.execute(f"DELETE FROM expenses WHERE user_id = {user_id}")
 
 
 def _parse_message(parsed_message: list) -> Message:

@@ -3,67 +3,48 @@ import datetime
 import expenses
 import categories
 import re
+
+from config import BOT_TOKEN
 from telebot import types
 
-#the data should put in the massage in format "category number"
 
-bot = telebot.TeleBot("5728308228:AAHTqNKbTwJGXiKDk7q3-gCmDSLPBWnCnhc")
+bot = telebot.TeleBot(BOT_TOKEN)
 
 
 @bot.message_handler(commands=['start'])
 def show_all_commands(message):
-	markup = types.ReplyKeyboardMarkup()
+	markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
 	button_add = types.KeyboardButton("Добавить расход ➕")
 	button_show = types.KeyboardButton("Показать все расходы 📓")
-	button_statistics = types.KeyboardButton("Статистика")
-	button_clear = types.KeyboardButton("Обнулить категорию")
-	button_categories = types.KeyboardButton("Доступные категории")
-	markup.add(button_add, button_show, button_statistics, button_clear, button_categories)
+	button_statistics = types.KeyboardButton("Статистика 📈")
+	button_clear = types.KeyboardButton("Обнулить категорию 0️⃣")
+	button_categories = types.KeyboardButton("Доступные категории 📖")
+	button_support = types.KeyboardButton("Удалить все расходы ❌")
+	markup.add(button_add, button_show, button_statistics, button_clear, button_categories, button_support)
 
-	bot.send_message(message.from_user.id, "Приветствую! Посчитаем расходы?", reply_markup=markup)
+	bot.send_message(message.from_user.id, "Приветствую! Посчитаем расходы?\n"
+										   "Для управления ботом используйте меню ->", reply_markup=markup)
 
 
 @bot.message_handler(regexp="Добавить расход")
-def add_help(message):
+def add_expense(message):
 	bot.send_message(message.from_user.id,
-					 "Чтобы добавить расход,\n"
-					 "просто отправьте в чат сообщение в формате\n"
-					 "\"категория сумма\"\n" 
+					 "Чтобы добавить расход, просто отправьте\n"
+					 "в чат сообщение в формате: \n\n"
+					 "<b>\"категория сумма\"</b>\n\n"
 					 "Список доступных категорий вы можете посмотреть,\n"
-					 "нажав кнопку \"Доступные категории\" в меню")
+					 "нажав кнопку \"Доступные категории\" в меню", parse_mode="HTML")
 
 
 @bot.message_handler(regexp="Статистика")
 def statistics(message):
 	keyboard = types.InlineKeyboardMarkup()
-	key_today = types.InlineKeyboardButton(text="Расходы за сегодня", callback_data="today")
-	key_month = types.InlineKeyboardButton(text="Расходы за месяц", callback_data="month")
-	key_year = types.InlineKeyboardButton(text="Расходы за год по месяцам", callback_data="year")
-	keyboard.add(key_today, key_month, key_year)
+	key_today = types.InlineKeyboardButton(text="За сегодня", callback_data="today")
+	key_month = types.InlineKeyboardButton(text="За месяц", callback_data="month")
+	key_year = types.InlineKeyboardButton(text="За год", callback_data="year")
+	keyboard.add(key_today, key_month, key_year, row_width=2)
 
 	bot.send_message(message.from_user.id, "Выберете период для просмотра статистики", reply_markup=keyboard)
-
-
-def today(message):
-	today_date = datetime.datetime.now().strftime("%Y-%m-%d")
-	answer_message = expenses.get_today_statistics(message.chat.id)
-	if answer_message != "":
-		bot.send_message(message.chat.id, f"""Расходы за сегодня {today_date}:\n{answer_message}""")
-	else:
-		bot.send_message(message.chat.id, "Сегодня расходов нет")
-
-
-def month(message):
-	month_date = datetime.datetime.now().strftime("%Y-%m")
-	answer_message = expenses.get_month_statistics(message.chat.id)
-	if answer_message != "":
-		bot.send_message(message.chat.id, f"""Расходы за месяц {month_date}:\n{answer_message}""")
-	else:
-		bot.send_message(message.chat.id, "За месяц расходов нет")
-
-
-def year(message):
-	pass
 
 
 @bot.callback_query_handler(func=lambda call: True)
@@ -74,6 +55,7 @@ def callback_worker(call):
 		month(message=call.message)
 	elif call.data == "year":
 		year(message=call.message)
+	bot.answer_callback_query(callback_query_id=call.id)
 
 
 @bot.message_handler(regexp="Показать все расходы")
@@ -97,19 +79,56 @@ def show_categories(message):
 	bot.send_message(message.chat.id, categories_str)
 
 
+@bot.message_handler(regexp="Удалить все расходы")
+def delete_all_expenses(message):
+	expenses.delete_all(message.chat.id)
+	bot.send_message(message.chat.id, "Все расходы успешно удалены")
+
+
 @bot.message_handler(func=lambda m: True)
 def add_consumption(message):
 	parsed_message = message.text.split()
 	if not is_message_correct(message.text):
-		bot.send_message(message.chat.id, """Не могу понять сообщение. Напишите сообщение в формате, например:\nшиха 200""" )
+		bot.send_message(message.chat.id,
+						 "Не могу понять сообщение. Напишите сообщение\n" 
+						 "в верном формате, например:\n"
+						 "<b>\"еда 200\"</b>",
+						 parse_mode="HTML")
 	else:
 		parsed_message.append(message.chat.id)
 		expenses.add_expense(parsed_message)
 		bot.send_message(message.from_user.id, "Расход успешно добавлен")
 
 
+def today(message):
+	today_date = datetime.datetime.now().strftime("%Y-%m-%d")
+	answer_message = expenses.get_today_statistics(message.chat.id)
+	if answer_message != "":
+		bot.send_message(message.chat.id, f"""Расходы за сегодня {today_date}:\n{answer_message}""")
+	else:
+		bot.send_message(message.chat.id, "Сегодня расходов нет")
+
+
+def month(message):
+	month_date = datetime.datetime.now().strftime("%Y-%m")
+	answer_message = expenses.get_month_statistics(message.chat.id)
+	if answer_message != "":
+		bot.send_message(message.chat.id, f"""Расходы за месяц {month_date}:\n{answer_message}""")
+	else:
+		bot.send_message(message.chat.id, "За месяц расходов нет")
+
+
+def year(message):
+	year_date = datetime.datetime.now().strftime("%Y")
+	answer_message = expenses.get_year_statistics(message.chat.id)
+	if answer_message != "":
+		bot.send_message(message.chat.id, f"""Расходы за год {year_date}:\n{answer_message}""")
+	else:
+		bot.send_message(message.chat.id, "За год расходов нет")
+
+
 def is_message_correct(message_text : str) :
-	match = re.findall(r"^([а-я]+)\s(\d+)\Z", message_text, re.MULTILINE)
+	match = re.findall(r"^([а-я]+)\s(\d{1,8})\Z", message_text, re.MULTILINE)
 	category = ''
 	if match != []:
 		category = match[0][0]
@@ -127,7 +146,7 @@ def clear_func(message: object):
 		expenses.clear(parsed_message)
 		bot.send_message(message.chat.id, """Категория успешно обнулена""")
 	else:
-		bot.send_message(message.chat.id, """Такой категории нет. Показать список категорий?\n /categories """)
+		bot.send_message(message.chat.id, """Такой категории нет""")
 
 #
 # @bot.message_handler(commands=['history'])
