@@ -29,9 +29,11 @@ If you want to see all your expenses just press the button in menu.
 ![image](https://github.com/user-attachments/assets/18dccbb6-bd27-42a2-93f3-23ca2007b8c9)
 
 **Technical part:**
+
 This bot was made by using telebot library which is connected to telegram API. Project contains db module which uses psycopg library for connecting and interaction with PostgreSQL database.
 
-**Database**
+**Database:**
+
 For database management PgAdmin was used.
 The structure of database: 
 
